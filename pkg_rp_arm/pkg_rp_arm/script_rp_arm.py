@@ -4,6 +4,8 @@ from rclpy.node import Node
 from geometry_msgs.msg import TransformStamped
 import tf2_ros
 from sensor_msgs.msg import JointState
+from moveit_msgs.msg import RobotState
+from geometry_msgs.msg import Twist
 import time
 
 
@@ -11,6 +13,7 @@ class my_Node(Node):
     def __init__(self):
         super().__init__("RP_Arm")
         self.jointPublisher = self.create_publisher(JointState,"/joint_states",10)
+        self.keyboardSubscriber = self.create_subscription(Twist,"/cmd_vel", self.key_input_callback, 10)
         self.tf_broadcaster_ = tf2_ros.TransformBroadcaster(self)
 
         self.jointName = ["slider_joint", "arm_joint"]
@@ -19,7 +22,6 @@ class my_Node(Node):
         self.get_logger().info("RP_Arm node has been started")
         
         self.timer = self.create_timer(0.1, self.go_to_target)
-        self.key_input = self.create_timer(0.1, self.key_input_callback)
 
     def go_to_target(self):
         msg = JointState()
@@ -56,8 +58,8 @@ class my_Node(Node):
         msg_rod_slider.header.stamp.nanosec = nanoseconds
         msg_rod_slider.header.frame_id = "rod_link"
         msg_rod_slider.child_frame_id = "slider_link"
-
-        msg_rod_slider.transform.translation.x = 0.0
+        
+        msg_rod_slider.transform.translation.x = self.jointPosition[0]
         msg_rod_slider.transform.translation.y = 0.0
         msg_rod_slider.transform.translation.z = 0.0
 
@@ -68,16 +70,22 @@ class my_Node(Node):
 
         self.tf_broadcaster_.sendTransform(msg_rod_slider)
 
-    def key_input_callback(self):            
-        key = self.get_input()
-        if key == 'w':
-            self.jointPosition[1] += 0.1  
-        elif key == 's':
-            self.jointPosition[1] -= 0.1 
-        elif key == 'a':
-            self.jointPosition[0] += 0.1  
-        elif key == 'd':
-            self.jointPosition[0] -= 0.1  
+    def key_input_callback(self, msg):         
+        key_slider = msg.linear.x
+     #   if key == 'w':
+     #       self.jointPosition[1] += 0.05  
+     #   elif key == 's':
+     #       self.jointPosition[1] -= 0.05
+        if key_slider < 0:
+            if(self.jointPosition[0] < 0.6):
+                self.jointPosition[0] += 0.05 
+            else:
+                self.jointPosition[0] += 0.0
+        elif key_slider > 0:
+            if(self.jointPosition[0] > -0.6):
+                self.jointPosition[0] -= 0.05 
+            else:
+                self.jointPosition[0] += 0.0
 
     def get_input(self):
         self.msg = str(input())
