@@ -4,8 +4,9 @@ from rclpy.node import Node
 from geometry_msgs.msg import TransformStamped
 import tf2_ros
 from sensor_msgs.msg import JointState
-from moveit_msgs.msg import RobotState
+from moveit_msgs.srv import GetPositionFK
 from geometry_msgs.msg import Twist
+import math
 import time
 
 
@@ -13,15 +14,21 @@ class my_Node(Node):
     def __init__(self):
         super().__init__("RP_Arm")
         self.jointPublisher = self.create_publisher(JointState,"/joint_states",10)
-        self.keyboardSubscriber = self.create_subscription(Twist,"/cmd_vel", self.key_input_callback, 10)
+
+        #self.keyboardSubscriber = self.create_subscription(Twist,"/cmd_vel", self.key_input_callback, 10)
+
+        self.fk_client = self.create_client(GetPositionFK, 'compute_fk')
+        
         self.tf_broadcaster_ = tf2_ros.TransformBroadcaster(self)
 
         self.jointName = ["slider_joint", "arm_joint"]
         self.jointPosition = [0.0, 0.0]
-
+        self.z = 0.0
+        self.w = 1.0
         self.get_logger().info("RP_Arm node has been started")
         
-        self.timer = self.create_timer(0.1, self.go_to_target)
+        self.timer1 = self.create_timer(0.1, self.key_input_callback)
+        self.timer2 = self.create_timer(0.01, self.go_to_target)
 
     def go_to_target(self):
         msg = JointState()
@@ -47,8 +54,8 @@ class my_Node(Node):
 
         msg_base_arm.transform.rotation.x = 0.0
         msg_base_arm.transform.rotation.y = 0.0 
-        msg_base_arm.transform.rotation.z = 0.0
-        msg_base_arm.transform.rotation.w = 1.0
+        msg_base_arm.transform.rotation.z = self.z
+        msg_base_arm.transform.rotation.w = self.w
 
         self.tf_broadcaster_.sendTransform(msg_base_arm)
 
@@ -70,7 +77,8 @@ class my_Node(Node):
 
         self.tf_broadcaster_.sendTransform(msg_rod_slider)
 
-    def key_input_callback(self, msg):         
+    def key_input_callback(self):  
+        '''       
         key_slider = msg.linear.x
      #   if key == 'w':
      #       self.jointPosition[1] += 0.05  
@@ -86,10 +94,39 @@ class my_Node(Node):
                 self.jointPosition[0] -= 0.05 
             else:
                 self.jointPosition[0] += 0.0
+            '''
+        [self.dist, self.theta] = self.inverse_kinematics()
+        if self.dist >= -0.6 and self.dist <= 0.6:
+            self.jointPosition[0] = self.dist
+        if self.theta >= 0 and self.theta <= 6.28:
+            self.jointPosition[1] = self.theta
+        
+    def inverse_kinematics(self):
+        [self.x, self.y] = self.get_input()
+        if self.y == 0.0:
+            self.y = 0.0001
+        self.dist = math.sqrt(pow(self.x , 2) + pow(self.y , 2))     
+        self.theta = math.atan(- self.x / self.y)  
+        [self.z , self.w] = self.calculate_quaternion(self.theta)
+        return self.dist, self.theta
 
+ 
     def get_input(self):
-        self.msg = str(input())
-        return self.msg[0]
+        print("Enter end effector position")
+        self.x = float(input("x:"))
+        self.y = float(input("y:"))
+        return self.x , self.y
+
+    def calculate_quaternion(self,theta_rad):
+        self.w = math.cos(math.degrees(theta_rad/2))
+        self.z = math.sin(math.degrees(theta_rad/2))
+        if(theta_rad >= 0 and theta_rad <= 2.093):
+            self.z = -self.z
+        elif(theta_rad > 2.093 and theta_rad <= 3.14):
+            self.w = -self.w
+        return self.z , self.w
+
+
 
 def main(args = None):
     rclpy.init(args = args)
