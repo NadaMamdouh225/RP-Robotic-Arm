@@ -114,7 +114,7 @@
     </link>
 
     <joint name="slider_EE_joint" type="fixed">
-        <origin xyz="0 -0.08 0" rpy="1.55 0 0"/>
+        <origin xyz="0 0 -0.18" rpy="0 0 0"/>
         <parent link="slider_link"/>
         <child link="end_effector"/>   
     </joint>
