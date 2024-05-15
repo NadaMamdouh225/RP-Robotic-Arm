@@ -22,6 +22,7 @@ class my_Node(Node):
         self.tf_broadcaster_ = tf2_ros.TransformBroadcaster(self)
 
         self.jointName = ["slider_joint", "arm_joint"]
+        #self.jointPosition = [-0.4, 0.0]
         self.jointPosition = [0.0, 0.0]
         self.z = 0.0
         self.w = 1.0
@@ -31,6 +32,7 @@ class my_Node(Node):
         self.timer2 = self.create_timer(0.01, self.go_to_target)
 
     def go_to_target(self):
+        #[self.p, self.r] = self.get_input()
         msg = JointState()
         timestamp = time.time()
         seconds = int(timestamp)
@@ -39,6 +41,8 @@ class my_Node(Node):
         msg.header.stamp.nanosec = nanoseconds
         msg.name = self.jointName
         msg.position = self.jointPosition
+        #self.jointPosition[0] = self.p
+        #self.jointPosition[1] = self.r
         self.jointPublisher.publish(msg)
 
         # Publish transform for base to arm
@@ -96,17 +100,25 @@ class my_Node(Node):
                 self.jointPosition[0] += 0.0
             '''
         [self.dist, self.theta] = self.inverse_kinematics()
-        if self.dist >= -0.6 and self.dist <= 0.6:
-            self.jointPosition[0] = self.dist
-        if self.theta >= 0 and self.theta <= 6.28:
-            self.jointPosition[1] = self.theta
+        #if self.dist >= -0.6 and self.dist <= 0.6:
+        self.jointPosition[0] = self.dist
+        #if math.radians(self.theta) >= 0 and math.radians(self.theta) <= 6.28:
+        self.jointPosition[1] = self.theta
         
     def inverse_kinematics(self):
         [self.x, self.y] = self.get_input()
+       
         if self.y == 0.0:
-            self.y = 0.0001
+            self.y = 0.00001
         self.dist = math.sqrt(pow(self.x , 2) + pow(self.y , 2))     
-        self.theta = math.atan(- self.x / self.y)  
+        self.theta = math.atan( self.x / self.y) 
+        if(self.x < 0 and self.y>0):
+            self.theta  = abs(self.theta) +(3.14/2)
+        elif(self.x < 0 and self.y<0):
+            self.theta = (3*3.14/2) - abs(self.theta)
+        elif(self.x > 0 and self.y<0):
+            self.theta =(3*3.14/2) + abs(self.theta)
+            
         [self.z , self.w] = self.calculate_quaternion(self.theta)
         return self.dist, self.theta
 
@@ -115,17 +127,17 @@ class my_Node(Node):
         print("Enter end effector position")
         self.x = float(input("x:"))
         self.y = float(input("y:"))
+        #self.x +=0.2
         return self.x , self.y
 
     def calculate_quaternion(self,theta_rad):
         self.w = math.cos(math.degrees(theta_rad/2))
         self.z = math.sin(math.degrees(theta_rad/2))
-        if(theta_rad >= 0 and theta_rad <= 2.093):
-            self.z = -self.z
-        elif(theta_rad > 2.093 and theta_rad <= 3.14):
-            self.w = -self.w
+        #if(theta_rad >= 0 and theta_rad <= 2.093):
+        #    self.z = -self.z
+        #elif(theta_rad > 2.093 and theta_rad <= 3.14):
+        #    self.w = -self.w
         return self.z , self.w
-
 
 
 def main(args = None):
