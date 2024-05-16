@@ -91,11 +91,11 @@
     </link>
 
     <joint name="slider_joint" type="prismatic">
-        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <origin xyz="-0.4 0 0" rpy="0 0 0"/>
         <parent link="rod_link"/>
         <child link="slider_link"/>
         <axis xyz="1 0 0"/>
-        <limit lower="0.6" upper="-0.6" velocity="100" effort="100"/> 
+        <limit lower="0" upper="1.0" velocity="100" effort="100"/> 
     </joint>
    
    <link name="slider_link">
