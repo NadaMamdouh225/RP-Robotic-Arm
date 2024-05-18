@@ -9,17 +9,13 @@ import math
 import time
 
 
-class my_Node(Node):
+class Move_Arm_Node(Node):
     def __init__(self):
         super().__init__("RP_Arm")
-        self.jointPublisher = self.create_publisher(JointState,"/joint_states",10)
-
-        #self.keyboardSubscriber = self.create_subscription(Twist,"/cmd_vel", self.key_input_callback, 10)
-        
+        self.jointPublisher = self.create_publisher(JointState,"/joint_states",10)        
         self.tf_broadcaster_ = tf2_ros.TransformBroadcaster(self)
 
         self.jointName = ["slider_joint", "arm_joint"]
-
         self.jointPosition = [0.0, 0.0]
         self.z = 0.0
         self.w = 1.0
@@ -28,8 +24,6 @@ class my_Node(Node):
         self.timer = self.create_timer(0.1, self.go_to_target)
 
     def go_to_target(self):
-        #[self.p, self.r] = self.get_input()
-        self.key_input_callback()
         msg = JointState()
         timestamp = time.time()
         seconds = int(timestamp)
@@ -38,8 +32,6 @@ class my_Node(Node):
         msg.header.stamp.nanosec = nanoseconds
         msg.name = self.jointName
         msg.position = self.jointPosition
-        #self.jointPosition[0] = self.p
-        #self.jointPosition[1] = self.r
         self.jointPublisher.publish(msg)
 
         # Publish transform for base to arm
@@ -76,33 +68,12 @@ class my_Node(Node):
 
         self.tf_broadcaster_.sendTransform(msg_base_arm)
 
-    def key_input_callback(self):  
-        '''       
-        key_slider = msg.linear.x
-     #   if key == 'w':
-     #       self.jointPosition[1] += 0.05  
-     #   elif key == 's':
-     #       self.jointPosition[1] -= 0.05
-        if key_slider < 0:
-            if(self.jointPosition[0] < 0.6):
-                self.jointPosition[0] += 0.05 
-            else:
-                self.jointPosition[0] += 0.0
-        elif key_slider > 0:
-            if(self.jointPosition[0] > -0.6):
-                self.jointPosition[0] -= 0.05 
-            else:
-                self.jointPosition[0] += 0.0
-            '''
-        [self.dist, self.theta] = self.inverse_kinematics()
-        if self.dist >= -0.4 and self.dist <= 1.0:
-            self.jointPosition[0] = self.dist
-        if math.radians(self.theta) >= 0 and math.radians(self.theta) <= 6.28:
-            self.jointPosition[1] = self.theta
+        self.key_input_callback()
+        
         
     def inverse_kinematics(self):
         [self.x, self.y] = self.get_input()
-    
+
         if self.y == 0.0:
             self.y = 0.00001
         self.dist = math.sqrt(pow(self.x , 2) + pow(self.y , 2))     
@@ -117,7 +88,6 @@ class my_Node(Node):
         [self.z , self.w] = self.calculate_quaternion(self.theta)
         return self.dist, self.theta
     
- 
     def get_input(self):
         print("Enter end effector position")
         self.x = float(input("x:"))
@@ -132,11 +102,18 @@ class my_Node(Node):
         elif(theta_rad > 2.093 and theta_rad <= 3.14):
             self.w = -self.w
         return self.z , self.w
+    
+    def key_input_callback(self):  
+        [self.dist, self.theta] = self.inverse_kinematics()
+        if self.dist >= -0.4 and self.dist <= 1.0:
+            self.jointPosition[0] = self.dist
+        if math.radians(self.theta) >= 0 and math.radians(self.theta) <= 6.28:
+            self.jointPosition[1] = self.theta
 
 
 def main(args = None):
     rclpy.init(args = args)
-    node = my_Node()
+    node = Move_Arm_Node()
     rclpy.spin(node)
     rclpy.shutdown()
 
