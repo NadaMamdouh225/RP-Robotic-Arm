@@ -1,4 +1,7 @@
 # RP-Robotic-Arm
+![Sim](RP-sim.png)
+![Phy](RP.png)
+
 ## How To Run
 1. Edit **file_subpath** in RP_Arm.launch.py with xacro file path
 2. Build the package with `colcon build`
